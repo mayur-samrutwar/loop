@@ -1,6 +1,7 @@
 import { auth, signOut } from '@/auth';
 import { SurfaceCard } from '@/components/loop/DesignPrimitives';
 import { Page } from '@/components/PageLayout';
+import { formatLoop } from '@/lib/formatLoop';
 import { reputation, totalEarnings } from '@/lib/scoreStore';
 import { resolveUserId } from '@/lib/serverUser';
 import { Marble } from '@worldcoin/mini-apps-ui-kit-react';
@@ -64,7 +65,7 @@ export default async function Profile() {
                 </p>
               </div>
               <p className="text-2xl font-semibold tracking-tight text-stone-950">
-                ${earnings.toFixed(2)}
+                {formatLoop(earnings)}
               </p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 text-xs">

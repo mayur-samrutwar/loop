@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
+import { formatLoop } from '@/lib/formatLoop';
 import {
   ActionStack,
   BackIconButton,
@@ -29,7 +30,7 @@ export function InstructionsStep({
         <div className="flex items-start justify-between gap-4">
           <SectionHeader title={task.title} />
           <span className="shrink-0 rounded-full bg-stone-950 px-3 py-1.5 text-xs font-semibold text-white">
-            $0.25
+            {formatLoop(1000)}
           </span>
         </div>
 

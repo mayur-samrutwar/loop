@@ -3,6 +3,7 @@
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getPreviewUserId } from '@/lib/clientUserId';
+import { formatLoop } from '@/lib/formatLoop';
 import type { ScoreBreakdown } from '@/lib/scoring';
 import type { ReputationStat, ScoreEntry } from '@/lib/scoreStore';
 import type { SignalSummary } from '@/lib/signalAggregator';
@@ -244,7 +245,7 @@ export function OutputStep({ clip, dataset, summary, onReset }: OutputStepProps)
             <div className="mt-4 flex items-end justify-between border-t border-stone-100 pt-3">
               <p className="text-xs text-stone-500">Lifetime earnings</p>
               <p className="text-lg font-semibold tracking-tight text-stone-950">
-                ${earnings.toFixed(2)}
+                {formatLoop(earnings)}
               </p>
             </div>
           ) : null}

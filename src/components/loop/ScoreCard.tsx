@@ -1,3 +1,4 @@
+import { formatLoop } from '@/lib/formatLoop';
 import type { ScoreBreakdown, ScoreTier } from '@/lib/scoring';
 import { SurfaceCard } from './DesignPrimitives';
 
@@ -70,7 +71,7 @@ export function ScoreCard({
           <div className="text-right">
             <p className="text-xs text-stone-500">Reward</p>
             <p className="text-2xl font-semibold tracking-tight text-stone-950">
-              ${finalReward.toFixed(2)}
+              {formatLoop(finalReward)}
             </p>
           </div>
         ) : (

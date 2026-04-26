@@ -25,7 +25,7 @@ export type ScoreBreakdown = {
   factors: ScoreFactor[];
 };
 
-const BASE_REWARD = 0.25;
+const BASE_REWARD = 1000;
 const REWARD_THRESHOLD = 60;
 
 function clamp(v: number, lo = 0, hi = 100) {
@@ -125,7 +125,7 @@ export function computeScore(summary: SignalSummary): ScoreBreakdown {
   } else {
     const tierBonus = tier === 'excellent' ? 1.4 : tier === 'good' ? 1.1 : 0.95;
     const rewardRaw = BASE_REWARD * (0.4 + (total / 100) * 0.6) * tierBonus;
-    reward = Math.max(0, Math.round(rewardRaw * 100) / 100);
+    reward = Math.max(0, Math.round(rewardRaw));
 
     if (tier === 'excellent') {
       message = 'Excellent capture. Premium reward unlocked.';

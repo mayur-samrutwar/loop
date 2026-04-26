@@ -1,3 +1,4 @@
+import { formatLoop } from '@/lib/formatLoop';
 import type { ScoreEntry } from '@/lib/scoreStore';
 import type { ScoreTier } from '@/lib/scoring';
 import { SurfaceCard } from './DesignPrimitives';
@@ -49,7 +50,7 @@ export function ScoreHistoryItem({ entry }: { entry: ScoreEntry }) {
         </p>
         {entry.breakdown.reward > 0 ? (
           <p className="text-sm font-semibold text-stone-900">
-            +${entry.breakdown.reward.toFixed(2)}
+            +{formatLoop(entry.breakdown.reward)}
           </p>
         ) : (
           <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone-400">
