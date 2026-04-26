@@ -1,5 +1,6 @@
 import { auth, signOut } from '@/auth';
 import { SurfaceCard } from '@/components/loop/DesignPrimitives';
+import { VerificationBadge } from '@/components/loop/VerificationBadge';
 import { Page } from '@/components/PageLayout';
 import { formatLoop } from '@/lib/formatLoop';
 import { reputation, totalEarnings } from '@/lib/scoreStore';
@@ -49,9 +50,12 @@ export default async function Profile() {
                 <p className="truncate text-xl font-semibold capitalize tracking-tight text-stone-950">
                   {user.username}
                 </p>
-                <p className="mt-0.5 text-xs capitalize text-stone-500">
-                  {stats.reputation} contributor
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs capitalize text-stone-500">
+                    {stats.reputation} contributor
+                  </p>
+                  <VerificationBadge />
+                </div>
               </div>
             </div>
           </SurfaceCard>

@@ -1,46 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-type VerifyRequest = {
-  payload: Record<string, unknown>;
-  action: string;
-  signal?: string;
+type Body = {
+  rp_id?: string;
+  idkitResponse?: unknown;
 };
 
 /**
- * Server-side World ID proof verification via Developer Portal HTTP API.
- * IDKit on the client produces the `payload` fields expected by this route.
+ * Verifies an IDKit proof-of-personhood payload through the Worldcoin
+ * Developer Portal. Loop re-runs this on every login so we can be sure the
+ * authenticated wallet is being driven by a real human.
  *
- * @see https://docs.world.org/api-reference/developer-portal/verify
+ * Forward the IDKit result payload AS-IS — the portal expects the exact shape
+ * IDKit emits, no field remapping.
+ *
+ * @see https://docs.world.org/world-id/idkit/integrate#step-5-verify-the-proof-in-your-backend
  */
 export async function POST(req: NextRequest) {
+  let body: Body;
   try {
-    const { payload, action, signal } = (await req.json()) as VerifyRequest;
-    const app_id = process.env.NEXT_PUBLIC_APP_ID;
-    if (!app_id) {
-      return NextResponse.json(
-        { verifyRes: { success: false }, error: 'Missing NEXT_PUBLIC_APP_ID' },
-        { status: 500 },
-      );
-    }
-
-    const url = `https://developer.worldcoin.org/api/v2/verify/${encodeURIComponent(app_id)}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action,
-        signal: signal ?? '',
-        ...payload,
-      }),
-    });
-
-    const data = (await res.json()) as { success?: boolean };
-    const success = Boolean(data.success);
-    return NextResponse.json(
-      { verifyRes: { success } },
-      { status: success ? 200 : 400 },
-    );
+    body = (await req.json()) as Body;
   } catch {
-    return NextResponse.json({ verifyRes: { success: false } }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
+
+  const rpId = body.rp_id ?? process.env.NEXT_PUBLIC_RP_ID;
+  if (!rpId) {
+    return NextResponse.json(
+      { error: 'Missing rp_id (set NEXT_PUBLIC_RP_ID)' },
+      { status: 500 },
+    );
+  }
+
+  if (!body.idkitResponse) {
+    return NextResponse.json(
+      { error: 'Missing idkitResponse' },
+      { status: 400 },
+    );
+  }
+
+  const url = `https://developer.world.org/api/v4/verify/${encodeURIComponent(rpId)}`;
+  const portalRes = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body.idkitResponse),
+  });
+
+  if (!portalRes.ok) {
+    const detail = await portalRes.text().catch(() => '');
+    return NextResponse.json(
+      { success: false, detail: detail.slice(0, 500) },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({ success: true });
 }
