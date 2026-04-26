@@ -1,8 +1,10 @@
 'use client';
 
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { blurFacesInClip } from '@/lib/clientFaceBlur';
 import { ActionStack, SectionHeader, SurfaceCard } from './DesignPrimitives';
+import type { CapturedClip } from './types';
 
 type Stage = {
   id: string;
@@ -11,11 +13,10 @@ type Stage = {
 };
 
 const STAGES: Stage[] = [
-  { id: 'upload', label: 'Prepare upload', detail: 'Packaging video and capture metadata' },
   {
     id: 'blur',
-    label: 'Privacy pass',
-    detail: 'Face boxes blurred; EXIF stripped',
+    label: 'Blur faces',
+    detail: 'Running on-device privacy pass',
   },
   {
     id: 'quality',
@@ -30,25 +31,62 @@ const STAGES: Stage[] = [
 ];
 
 type ProcessingStepProps = {
-  onDone: () => void;
+  clip: CapturedClip;
+  onDone: (clip: CapturedClip) => void;
 };
 
-export function ProcessingStep({ onDone }: ProcessingStepProps) {
+export function ProcessingStep({ clip, onDone }: ProcessingStepProps) {
   const [index, setIndex] = useState(0);
+  const [blurProgress, setBlurProgress] = useState(0);
+  const [processedClip, setProcessedClip] = useState<CapturedClip | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    if (index >= STAGES.length) {
-      return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    let cancelled = false;
+
+    async function runPipeline() {
+      try {
+        setIndex(0);
+        const redactedClip = await blurFacesInClip(clip, (progress) => {
+          if (!cancelled) setBlurProgress(progress);
+        });
+        if (cancelled) return;
+        setProcessedClip(redactedClip);
+        setIndex(1);
+
+        await new Promise((resolve) => window.setTimeout(resolve, 700));
+        if (cancelled) return;
+        setIndex(2);
+
+        await new Promise((resolve) => window.setTimeout(resolve, 700));
+        if (cancelled) return;
+        setIndex(STAGES.length);
+      } catch (pipelineError) {
+        if (cancelled) return;
+        setError(
+          pipelineError instanceof Error
+            ? pipelineError.message
+            : 'Could not process recording.',
+        );
+      }
     }
-    const t = setTimeout(() => setIndex((i) => i + 1), 780);
-    return () => clearTimeout(t);
-  }, [index, onDone]);
+
+    runPipeline();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clip]);
 
   return (
     <div className="flex w-full max-w-md flex-col gap-8">
       <SectionHeader
         title="Processing"
-        description="We prepare the upload, clean private metadata, score quality, and generate a dummy segmented timeline."
+        description="Blurring faces, scoring quality, and generating dummy segments before upload."
       />
 
       <ol className="flex flex-col gap-4">
@@ -72,6 +110,14 @@ export function ProcessingStep({ onDone }: ProcessingStepProps) {
                       {stage.label}
                     </p>
                     <p className="text-xs text-stone-600">{stage.detail}</p>
+                    {stage.id === 'blur' && active ? (
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                        <div
+                          className="h-full rounded-full bg-stone-950 transition-all duration-300"
+                          style={{ width: `${blurProgress}%` }}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                   <span className="text-xs font-medium uppercase tracking-wide text-stone-500">
                     {done ? 'Done' : active ? 'Running' : 'Queued'}
@@ -83,9 +129,23 @@ export function ProcessingStep({ onDone }: ProcessingStepProps) {
         })}
       </ol>
 
+      {error ? (
+        <SurfaceCard className="border-red-100 bg-red-50 p-4 text-sm leading-relaxed text-red-700">
+          {error}
+        </SurfaceCard>
+      ) : null}
+
       {index >= STAGES.length ? (
         <ActionStack>
-          <Button className="w-full" onClick={onDone} size="lg" variant="primary">
+          <Button
+            className="w-full"
+            disabled={!processedClip}
+            onClick={() => {
+              if (processedClip) onDone(processedClip);
+            }}
+            size="lg"
+            variant="primary"
+          >
             Continue
           </Button>
         </ActionStack>

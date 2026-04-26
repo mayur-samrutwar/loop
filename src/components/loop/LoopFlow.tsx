@@ -113,7 +113,7 @@ export function LoopFlow() {
     [],
   );
 
-  const onProcessingDone = useCallback(() => {
+  const onProcessingDone = useCallback((processedClip: CapturedClip) => {
     const steps = initialSegments.map(({ start, end, label }) => ({
       start: Math.round(start * 10) / 10,
       end: Math.round(end * 10) / 10,
@@ -125,6 +125,7 @@ export function LoopFlow() {
       steps,
       quality_score: Math.min(0.98, Math.round((baseQuality + 0.05) * 100) / 100),
     });
+    setClip(processedClip);
     setStep('output');
   }, [baseQuality, initialSegments, selectedTask.id, selectedTask.title]);
 
@@ -159,8 +160,8 @@ export function LoopFlow() {
         />
       ) : null}
 
-      {humanVerified && step === 'processing' ? (
-        <ProcessingStep onDone={onProcessingDone} />
+      {humanVerified && step === 'processing' && clip ? (
+        <ProcessingStep clip={clip} onDone={onProcessingDone} />
       ) : null}
 
       {humanVerified && step === 'output' && dataset && clip ? (
