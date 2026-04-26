@@ -1,5 +1,6 @@
 'use client';
 
+import { requestMicrophonePermission } from '@/lib/requestMicrophone';
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -72,6 +73,23 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
     setError(null);
     setRequestingPermission(true);
     try {
+      // World App requires us to request microphone access through MiniKit
+      // before `getUserMedia` will hand back an audio track.
+      // https://docs.world.org/mini-apps/reference/microphone
+      const mic = await requestMicrophonePermission();
+      if (!mic.ok) {
+        const message =
+          mic.reason === 'disabled'
+            ? 'Microphone is disabled for World App. Enable it in your phone Settings, then try again.'
+            : mic.reason === 'rejected'
+              ? 'Microphone access was declined. Tap "Allow camera" again to retry.'
+              : mic.reason === 'unsupported'
+                ? 'This World App version cannot grant microphone access. Update World App and try again.'
+                : 'Could not request microphone access. Please try again.';
+        setError(message);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: {
