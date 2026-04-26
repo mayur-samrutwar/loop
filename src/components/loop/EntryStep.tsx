@@ -73,8 +73,6 @@ function TaskIcon({ id }: { id: TaskCategory['id'] }) {
     laundry: <path {...common} d="M7 4.75h10A1.25 1.25 0 0 1 18.25 6v12A1.25 1.25 0 0 1 17 19.25H7A1.25 1.25 0 0 1 5.75 18V6A1.25 1.25 0 0 1 7 4.75Zm2 3h.01M12 16a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z" />,
     meal_prep: <path {...common} d="M5 18.5h14M7 15.5h10l-1.25-7h-7.5L7 15.5Zm3-10 2-2 2 2" />,
     surface_cleaning: <path {...common} d="M5 17.5h14M7 14l5-5 3 3-5 5H7v-3Zm8.5-5.5 1.5-1.5" />,
-    object_sorting: <path {...common} d="M5.75 6.75h5.5v5.5h-5.5v-5.5Zm7 0h5.5v5.5h-5.5v-5.5Zm-7 7h5.5v3.5h-5.5v-3.5Zm7 0h5.5v3.5h-5.5v-3.5Z" />,
-    door_interaction: <path {...common} d="M8 4.75h8A1.25 1.25 0 0 1 17.25 6v12A1.25 1.25 0 0 1 16 19.25H8V4.75Zm5.5 7.25h.01" />,
   };
 
   return (

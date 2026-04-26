@@ -25,22 +25,6 @@ const items = [
     ),
   },
   {
-    href: '/profile',
-    label: 'Profile',
-    icon: (
-      <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5">
-        <path
-          d="M12 12.25a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Zm7.25 7c-.82-3.08-3.6-5.25-7.25-5.25s-6.43 2.17-7.25 5.25"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.8"
-        />
-      </svg>
-    ),
-  },
-  {
     href: '/notifications',
     label: 'Notifications',
     icon: (
@@ -56,6 +40,23 @@ const items = [
       </svg>
     ),
   },
+  {
+    href: '/profile',
+    label: 'Profile',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5">
+        <path
+          d="M12 12.25a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Zm7.25 7c-.82-3.08-3.6-5.25-7.25-5.25s-6.43 2.17-7.25 5.25"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.8"
+        />
+      </svg>
+    ),
+  },
+  
 ];
 
 export function BottomMenu() {

@@ -9,9 +9,7 @@ export type TaskId =
   | 'dishwashing'
   | 'laundry'
   | 'meal_prep'
-  | 'surface_cleaning'
-  | 'object_sorting'
-  | 'door_interaction';
+  | 'surface_cleaning';
 
 export type StepLabel = string;
 
@@ -41,6 +39,7 @@ export type TaskCategory = {
   id: TaskId;
   title: string;
   subtitle: string;
+  demoVideo: string;
   labels: StepLabel[];
   checks: string[];
 };
@@ -50,6 +49,7 @@ export const TASK_CATEGORIES: TaskCategory[] = [
     id: 'dishwashing',
     title: 'Dishwashing',
     subtitle: 'Sink, hands, utensils',
+    demoVideo: '/dishes.mp4',
     labels: ['pick', 'soap', 'scrub', 'rinse', 'place'],
     checks: ['Hands visible', 'Sink in frame', 'Good lighting', 'Stable phone'],
   },
@@ -57,6 +57,7 @@ export const TASK_CATEGORIES: TaskCategory[] = [
     id: 'laundry',
     title: 'Laundry',
     subtitle: 'Fold, stack, sort',
+    demoVideo: '/folding.mp4',
     labels: ['pick', 'fold', 'smooth', 'stack', 'sort'],
     checks: ['Full table view', 'Clothes visible', 'Hands visible', 'Stable phone'],
   },
@@ -64,6 +65,7 @@ export const TASK_CATEGORIES: TaskCategory[] = [
     id: 'meal_prep',
     title: 'Meal prep',
     subtitle: 'Cut, mix, arrange',
+    demoVideo: '/food.mp4',
     labels: ['pick', 'cut', 'mix', 'move', 'place'],
     checks: ['Tool visible', 'Board visible', 'Hands visible', 'Good lighting'],
   },
@@ -71,21 +73,8 @@ export const TASK_CATEGORIES: TaskCategory[] = [
     id: 'surface_cleaning',
     title: 'Surface cleaning',
     subtitle: 'Wipe, spray, clear',
+    demoVideo: '/toilet.mp4',
     labels: ['spray', 'wipe', 'move', 'inspect', 'finish'],
     checks: ['Surface visible', 'Tool visible', 'Hands visible', 'Stable phone'],
-  },
-  {
-    id: 'object_sorting',
-    title: 'Object sorting',
-    subtitle: 'Group, classify, place',
-    labels: ['pick', 'inspect', 'sort', 'move', 'place'],
-    checks: ['Objects visible', 'Bins visible', 'Hands visible', 'No clutter'],
-  },
-  {
-    id: 'door_interaction',
-    title: 'Door interaction',
-    subtitle: 'Reach, open, close',
-    labels: ['reach', 'grip', 'open', 'pass', 'close'],
-    checks: ['Handle visible', 'Body path clear', 'Hands visible', 'Stable frame'],
   },
 ];

@@ -33,13 +33,17 @@ export function InstructionsStep({
           </span>
         </div>
 
-        <SurfaceCard className="aspect-square overflow-hidden bg-gradient-to-br from-stone-100 to-white p-4 shadow-[0_24px_70px_rgba(28,25,23,0.08)]">
-          <div className="flex h-full flex-col items-center justify-center rounded-[1.35rem] border border-dashed border-stone-300 text-center">
-            <p className="text-sm font-semibold text-stone-950">Example video</p>
-            <p className="mt-2 max-w-[180px] text-xs leading-relaxed text-stone-500">
-              Demo clip placeholder. We will add the sample video here.
-            </p>
-          </div>
+        <SurfaceCard className="aspect-square overflow-hidden bg-stone-950 shadow-[0_24px_70px_rgba(28,25,23,0.08)]">
+          <video
+            className="demo-video pointer-events-none h-full w-full object-cover"
+            src={task.demoVideo}
+            autoPlay
+            muted
+            loop
+            playsInline
+            disablePictureInPicture
+            preload="metadata"
+          />
         </SurfaceCard>
 
         <SurfaceCard className="p-4 shadow-[0_18px_45px_rgba(28,25,23,0.05)]">

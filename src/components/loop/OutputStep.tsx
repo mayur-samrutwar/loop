@@ -3,6 +3,7 @@
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Confetti, type ConfettiRef } from '@/components/ui/confetti';
+import { blurFacesInClip } from '@/lib/clientFaceBlur';
 import { ActionStack, SectionHeader, SurfaceCard } from './DesignPrimitives';
 import type { CapturedClip, DatasetOutput } from './types';
 
@@ -20,28 +21,43 @@ type CreateUploadResponse = {
 
 export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
   const confettiRef = useRef<ConfettiRef>(null);
+  const [redactedClip, setRedactedClip] = useState<CapturedClip | null>(null);
+  const [blurring, setBlurring] = useState(false);
+  const [blurProgress, setBlurProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadKey, setUploadKey] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadComplete, setUploadComplete] = useState(false);
   const [hasFiredConfetti, setHasFiredConfetti] = useState(false);
-  const uploaded = progress >= 100;
 
   const upload = useCallback(async () => {
-    if (uploading || uploaded) return;
+    if (blurring || uploading || uploadComplete) return;
 
+    setBlurring(true);
     setUploading(true);
     setProgress(0);
+    setBlurProgress(0);
     setUploadError(null);
+    setUploadComplete(false);
+    setHasFiredConfetti(false);
 
     try {
+      const clipToUpload =
+        redactedClip ??
+        (await blurFacesInClip(clip, (nextProgress) => {
+          setBlurProgress(nextProgress);
+        }));
+      setRedactedClip(clipToUpload);
+      setBlurring(false);
+
       const response = await fetch('/api/recordings/create-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fileName: clip.fileName,
-          contentType: clip.mimeType,
-          size: clip.size,
+          fileName: clipToUpload.fileName,
+          contentType: clipToUpload.mimeType,
+          size: clipToUpload.size,
           task: dataset.task,
         }),
       });
@@ -61,7 +77,7 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadTarget.uploadUrl);
-        xhr.setRequestHeader('Content-Type', clip.mimeType);
+        xhr.setRequestHeader('Content-Type', clipToUpload.mimeType);
 
         xhr.upload.onprogress = (event) => {
           if (!event.lengthComputable) return;
@@ -72,6 +88,7 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
           if (xhr.status >= 200 && xhr.status < 300) {
             setProgress(100);
             setUploadKey(uploadTarget.key);
+            setUploadComplete(true);
             resolve();
             return;
           }
@@ -83,7 +100,7 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
           reject(new Error('Upload failed. Check R2 CORS and network access.'));
         };
 
-        xhr.send(clip.blob);
+        xhr.send(clipToUpload.blob);
       });
     } catch (error) {
       setProgress(0);
@@ -91,16 +108,24 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
         error instanceof Error ? error.message : 'Upload failed. Try again.',
       );
     } finally {
+      setBlurring(false);
       setUploading(false);
     }
-  }, [clip, dataset.task, uploaded, uploading]);
+  }, [
+    blurring,
+    clip,
+    dataset.task,
+    redactedClip,
+    uploadComplete,
+    uploading,
+  ]);
 
   useEffect(() => {
-    if (!uploaded || hasFiredConfetti) return;
+    if (!uploadComplete || hasFiredConfetti) return;
 
     confettiRef.current?.fire();
     setHasFiredConfetti(true);
-  }, [hasFiredConfetti, uploaded]);
+  }, [hasFiredConfetti, uploadComplete]);
 
   return (
     <div className="relative flex w-full max-w-md flex-col gap-8">
@@ -109,7 +134,7 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
         className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
       />
 
-      {uploaded ? (
+      {uploadComplete ? (
         <div className="pointer-events-none absolute inset-x-0 -top-4 flex justify-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
           <span className="h-3 w-3 rounded-full bg-sky-400" />
@@ -118,11 +143,11 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
       ) : null}
 
       <SectionHeader
-        title={uploaded ? 'Upload complete' : 'Ready to upload'}
+        title={uploadComplete ? 'Upload complete' : 'Ready to upload'}
         description={
-          uploaded
+          uploadComplete
             ? 'Your recording and generated segments were uploaded to the Loop server.'
-            : 'We generated a dummy segmented timeline from the recording. Upload sends the video and metadata to our server.'
+            : 'Faces are blurred on-device first, then the redacted video and metadata are uploaded.'
         }
       />
 
@@ -134,13 +159,27 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
             </p>
             <p className="mt-1 text-xs text-stone-500">
               {dataset.steps.length} auto segments ·{' '}
-              {(clip.size / (1024 * 1024)).toFixed(1)}MB
+              {((redactedClip?.size ?? clip.size) / (1024 * 1024)).toFixed(1)}MB
             </p>
           </div>
           <span className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700">
-            Video
+            {redactedClip ? 'Blurred' : 'Raw'}
           </span>
         </div>
+
+        {blurring ? (
+          <>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
+              <div
+                className="h-full rounded-full bg-stone-950 transition-all duration-300"
+                style={{ width: `${blurProgress}%` }}
+              />
+            </div>
+            <p className="mt-3 text-xs text-stone-500">
+              Blurring faces on-device · {blurProgress}%
+            </p>
+          </>
+        ) : null}
 
         <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
           <div
@@ -149,10 +188,12 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
           />
         </div>
         <p className="mt-3 text-xs text-stone-500">
-          {uploaded
+          {uploadComplete
             ? 'Uploaded successfully.'
             : uploading
-              ? `${progress}% uploaded`
+              ? blurring
+                ? 'Waiting for privacy pass before upload.'
+                : `${progress}% uploaded`
               : 'Ready for secure R2 upload.'}
         </p>
         {uploadKey ? (
@@ -185,12 +226,12 @@ export function OutputStep({ clip, dataset, onReset }: OutputStepProps) {
       </SurfaceCard>
 
       <ActionStack>
-        {!uploaded ? (
-          <Button size="lg" variant="primary" onClick={upload} disabled={uploading}>
-            {uploading ? 'Uploading' : 'Upload recording'}
+        {!uploadComplete ? (
+          <Button size="lg" variant="primary" onClick={upload} disabled={uploading || blurring}>
+            {blurring ? 'Blurring faces' : uploading ? 'Uploading' : 'Upload recording'}
           </Button>
         ) : null}
-        <Button size="lg" variant={uploaded ? 'primary' : 'tertiary'} onClick={onReset}>
+        <Button size="lg" variant={uploadComplete ? 'primary' : 'tertiary'} onClick={onReset}>
           Start new capture
         </Button>
       </ActionStack>
