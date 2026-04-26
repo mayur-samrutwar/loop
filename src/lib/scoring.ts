@@ -26,6 +26,7 @@ export type ScoreBreakdown = {
 };
 
 const BASE_REWARD = 0.25;
+const REWARD_THRESHOLD = 60;
 
 function clamp(v: number, lo = 0, hi = 100) {
   return Math.max(lo, Math.min(hi, v));
@@ -111,22 +112,29 @@ export function computeScore(summary: SignalSummary): ScoreBreakdown {
   );
 
   let tier: ScoreTier = 'low';
-  let message =
-    'Quality below threshold. Try again with hands clearly in frame and steadier light.';
-  if (total >= 82) {
-    tier = 'excellent';
-    message = 'Excellent capture. Premium reward unlocked.';
-  } else if (total >= 65) {
-    tier = 'good';
-    message = 'Good capture. Keep hands in frame longer for a higher reward.';
-  } else if (total >= 45) {
-    tier = 'fair';
-    message = 'Fair capture. Vary your motion and stabilise the camera.';
-  }
+  if (total >= 82) tier = 'excellent';
+  else if (total >= 65) tier = 'good';
+  else if (total >= 45) tier = 'fair';
 
-  const tierBonus = tier === 'excellent' ? 1.4 : tier === 'good' ? 1.1 : tier === 'fair' ? 0.85 : 0.5;
-  const rewardRaw = BASE_REWARD * (0.4 + (total / 100) * 0.6) * tierBonus;
-  const reward = Math.max(0, Math.round(rewardRaw * 100) / 100);
+  let reward = 0;
+  let message: string;
+
+  if (total < REWARD_THRESHOLD) {
+    message =
+      'Your recording is too weak to earn a reward. Keep hands clearly in frame and aim for steadier, well-lit motion next time.';
+  } else {
+    const tierBonus = tier === 'excellent' ? 1.4 : tier === 'good' ? 1.1 : 0.95;
+    const rewardRaw = BASE_REWARD * (0.4 + (total / 100) * 0.6) * tierBonus;
+    reward = Math.max(0, Math.round(rewardRaw * 100) / 100);
+
+    if (tier === 'excellent') {
+      message = 'Excellent capture. Premium reward unlocked.';
+    } else if (tier === 'good') {
+      message = 'Good capture. Keep hands in frame longer for a higher reward.';
+    } else {
+      message = 'Fair capture. Vary your motion and stabilise the camera for a bigger reward.';
+    }
+  }
 
   return { total, reward, tier, message, factors };
 }

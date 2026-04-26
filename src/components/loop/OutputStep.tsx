@@ -2,12 +2,12 @@
 
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Confetti, type ConfettiRef } from '@/components/ui/confetti';
 import { getPreviewUserId } from '@/lib/clientUserId';
 import type { ScoreBreakdown } from '@/lib/scoring';
 import type { ReputationStat, ScoreEntry } from '@/lib/scoreStore';
 import type { SignalSummary } from '@/lib/signalAggregator';
 import { PREVIEW_HEADER_KEY } from '@/lib/userIdConstants';
+import { ConfettiOverlay, type ConfettiOverlayHandle } from './ConfettiOverlay';
 import { ActionStack, SectionHeader, SurfaceCard } from './DesignPrimitives';
 import { ScoreCard } from './ScoreCard';
 import type { CapturedClip, DatasetOutput } from './types';
@@ -34,7 +34,7 @@ type ScoreResponse = {
 type Phase = 'idle' | 'uploading' | 'scoring' | 'done' | 'error';
 
 export function OutputStep({ clip, dataset, summary, onReset }: OutputStepProps) {
-  const confettiRef = useRef<ConfettiRef>(null);
+  const confettiRef = useRef<ConfettiOverlayHandle>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [progress, setProgress] = useState(0);
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null);
@@ -145,9 +145,11 @@ export function OutputStep({ clip, dataset, summary, onReset }: OutputStepProps)
 
   useEffect(() => {
     if (phase !== 'done' || hasFiredConfetti) return;
-    confettiRef.current?.fire();
+    if (breakdown && breakdown.reward > 0) {
+      confettiRef.current?.fire();
+    }
     setHasFiredConfetti(true);
-  }, [hasFiredConfetti, phase]);
+  }, [breakdown, hasFiredConfetti, phase]);
 
   const isWorking = phase === 'uploading' || phase === 'scoring';
   const headlineTitle =
@@ -170,10 +172,7 @@ export function OutputStep({ clip, dataset, summary, onReset }: OutputStepProps)
 
   return (
     <div className="relative flex w-full max-w-md flex-col gap-6">
-      <Confetti
-        ref={confettiRef}
-        className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
-      />
+      <ConfettiOverlay ref={confettiRef} />
 
       <SectionHeader title={headlineTitle} description={headlineDescription} />
 

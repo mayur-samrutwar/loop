@@ -43,6 +43,7 @@ export function ScoreCard({
 }: ScoreCardProps) {
   const tier = tierStyles[breakdown.tier];
   const finalReward = reward ?? breakdown.reward;
+  const hasReward = finalReward > 0;
 
   return (
     <SurfaceCard className={`p-5 ring-1 ${tier.ring} ${className ?? ''}`}>
@@ -65,12 +66,18 @@ export function ScoreCard({
           {breakdown.total}
           <span className="ml-1 text-base font-medium text-stone-400">/100</span>
         </p>
-        <div className="text-right">
-          <p className="text-xs text-stone-500">Reward</p>
-          <p className="text-2xl font-semibold tracking-tight text-stone-950">
-            ${finalReward.toFixed(2)}
-          </p>
-        </div>
+        {hasReward ? (
+          <div className="text-right">
+            <p className="text-xs text-stone-500">Reward</p>
+            <p className="text-2xl font-semibold tracking-tight text-stone-950">
+              ${finalReward.toFixed(2)}
+            </p>
+          </div>
+        ) : (
+          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-500">
+            No reward
+          </span>
+        )}
       </div>
 
       <p className="mt-4 text-sm leading-relaxed text-stone-600">

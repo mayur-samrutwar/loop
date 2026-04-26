@@ -47,9 +47,15 @@ export function ScoreHistoryItem({ entry }: { entry: ScoreEntry }) {
           {entry.breakdown.total}
           <span className="ml-1 text-sm font-medium text-stone-400">/100</span>
         </p>
-        <p className="text-sm font-semibold text-stone-900">
-          +${entry.breakdown.reward.toFixed(2)}
-        </p>
+        {entry.breakdown.reward > 0 ? (
+          <p className="text-sm font-semibold text-stone-900">
+            +${entry.breakdown.reward.toFixed(2)}
+          </p>
+        ) : (
+          <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone-400">
+            No reward
+          </p>
+        )}
       </div>
 
       <p className="mt-3 text-xs leading-relaxed text-stone-500">
