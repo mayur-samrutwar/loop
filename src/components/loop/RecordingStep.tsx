@@ -3,10 +3,6 @@
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  sampleFrameSignals,
-  type FrameSignals,
-} from '@/lib/frameQuality';
-import {
   ActionStack,
   BackIconButton,
   SectionHeader,
@@ -29,19 +25,16 @@ type RecordingStepProps = {
 
 export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
-  const priorRef = useRef<Uint8ClampedArray | null>(null);
-  const rafRef = useRef<number | null>(null);
+  const tickRef = useRef<number | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
   const [recording, setRecording] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [requestingPermission, setRequestingPermission] = useState(false);
-  const [signals, setSignals] = useState<FrameSignals | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const recordingStartRef = useRef<number | null>(null);
 
@@ -60,14 +53,15 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
   }, []);
 
   const stopStream = useCallback(() => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
+    if (tickRef.current) {
+      window.clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
     if (recorderRef.current?.state === 'recording') {
       recorderRef.current.stop();
     }
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-    priorRef.current = null;
   }, []);
 
   useEffect(() => () => stopStream(), [stopStream]);
@@ -104,45 +98,21 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
   }, [requestingPermission, started]);
 
   useEffect(() => {
-    if (!started) return;
+    if (!recording) return;
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-
-    const tick = () => {
-      if (video.readyState < 2) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-      const w = Math.min(480, video.videoWidth);
-      const h = Math.floor((w / video.videoWidth) * video.videoHeight) || 360;
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
-      ctx.drawImage(video, 0, 0, w, h);
-      const sig = sampleFrameSignals(ctx, w, h, priorRef.current);
-      const img = ctx.getImageData(0, 0, w, h);
-      priorRef.current = new Uint8ClampedArray(img.data);
-      setSignals(sig);
-
+    tickRef.current = window.setInterval(() => {
       if (recordingStartRef.current) {
-        const nextElapsed =
-          (performance.now() - recordingStartRef.current) / 1000;
-        setElapsed(nextElapsed);
+        setElapsed((performance.now() - recordingStartRef.current) / 1000);
       }
+    }, 100);
 
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (tickRef.current) {
+        window.clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
     };
-  }, [started]);
+  }, [recording]);
 
   useEffect(() => {
     startCamera();
@@ -206,18 +176,8 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
     setRecording(false);
     const durationSec = Math.min(
       MAX_RECORDING_SECONDS,
-      Math.max(3, Math.round(elapsed * 10) / 10),
+      Math.max(1, Math.round(elapsed * 10) / 10),
     );
-    const qualityHint =
-      signals == null
-        ? 0.75
-        : Math.min(
-            0.97,
-            0.72 +
-              Math.min(signals.skinRatioLower * 8, 0.12) +
-              Math.min(signals.sinkBlueRatio * 6, 0.1) -
-              Math.max(0, signals.motion - 0.04) * 2,
-          );
 
     if (!recorder || recorder.state === 'inactive') {
       stopStream();
@@ -240,7 +200,7 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
       const safeTask = task.id.replace(/[^a-z0-9-_]/g, '-');
       onComplete({
         durationSec,
-        qualityHint,
+        qualityHint: 0.8,
         clip: {
           blob,
           fileName: `${safeTask}-${Date.now()}.${extension}`,
@@ -252,14 +212,7 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
     };
 
     recorder.stop();
-  }, [
-    elapsed,
-    getSupportedMimeType,
-    onComplete,
-    signals,
-    stopStream,
-    task.id,
-  ]);
+  }, [elapsed, getSupportedMimeType, onComplete, stopStream, task.id]);
 
   useEffect(() => {
     if (recording && elapsed >= MAX_RECORDING_SECONDS) {
@@ -285,7 +238,6 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
           muted
           playsInline
         />
-        <canvas ref={canvasRef} className="hidden" aria-hidden />
 
         {!recording ? (
           <button
@@ -374,7 +326,6 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
           playsInline
         />
       </SurfaceCard>
-      <canvas ref={canvasRef} className="hidden" aria-hidden />
 
       {!started ? (
         <ActionStack>

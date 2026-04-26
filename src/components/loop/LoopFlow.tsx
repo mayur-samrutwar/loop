@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { SignalSummary } from '@/lib/signalAggregator';
 import {
   TASK_CATEGORIES,
   type CapturedClip,
@@ -45,6 +46,7 @@ export function LoopFlow() {
   const [baseQuality, setBaseQuality] = useState(0.82);
   const [dataset, setDataset] = useState<DatasetOutput | null>(null);
   const [clip, setClip] = useState<CapturedClip | null>(null);
+  const [summary, setSummary] = useState<SignalSummary | null>(null);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(FLOW_STORAGE_KEY);
@@ -95,6 +97,7 @@ export function LoopFlow() {
     setBaseQuality(0.82);
     setDataset(null);
     setClip(null);
+    setSummary(null);
     window.localStorage.removeItem(FLOW_STORAGE_KEY);
     emitFlowChange();
   }, []);
@@ -108,26 +111,32 @@ export function LoopFlow() {
       setDurationSec(meta.durationSec);
       setBaseQuality(meta.qualityHint);
       setClip(meta.clip);
+      setSummary(null);
       setStep('processing');
     },
     [],
   );
 
-  const onProcessingDone = useCallback((processedClip: CapturedClip) => {
-    const steps = initialSegments.map(({ start, end, label }) => ({
-      start: Math.round(start * 10) / 10,
-      end: Math.round(end * 10) / 10,
-      label,
-    }));
-    setDataset({
-      task: selectedTask.id,
-      task_name: selectedTask.title,
-      steps,
-      quality_score: Math.min(0.98, Math.round((baseQuality + 0.05) * 100) / 100),
-    });
-    setClip(processedClip);
-    setStep('output');
-  }, [baseQuality, initialSegments, selectedTask.id, selectedTask.title]);
+  const onProcessingDone = useCallback(
+    (processedClip: CapturedClip, scanSummary: SignalSummary) => {
+      const steps = initialSegments.map(({ start, end, label }) => ({
+        start: Math.round(start * 10) / 10,
+        end: Math.round(end * 10) / 10,
+        label,
+      }));
+      setDataset({
+        task: selectedTask.id,
+        task_name: selectedTask.title,
+        steps,
+        quality_score:
+          Math.min(0.98, Math.round((baseQuality + 0.05) * 100) / 100),
+      });
+      setClip(processedClip);
+      setSummary(scanSummary);
+      setStep('output');
+    },
+    [baseQuality, initialSegments, selectedTask.id, selectedTask.title],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-8 pb-8">
@@ -164,8 +173,13 @@ export function LoopFlow() {
         <ProcessingStep clip={clip} onDone={onProcessingDone} />
       ) : null}
 
-      {humanVerified && step === 'output' && dataset && clip ? (
-        <OutputStep clip={clip} dataset={dataset} onReset={reset} />
+      {humanVerified && step === 'output' && dataset && clip && summary ? (
+        <OutputStep
+          clip={clip}
+          dataset={dataset}
+          summary={summary}
+          onReset={reset}
+        />
       ) : null}
     </div>
   );

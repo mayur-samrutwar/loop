@@ -1,6 +1,8 @@
 import { auth, signOut } from '@/auth';
 import { SurfaceCard } from '@/components/loop/DesignPrimitives';
 import { Page } from '@/components/PageLayout';
+import { reputation, totalEarnings } from '@/lib/scoreStore';
+import { resolveUserId } from '@/lib/serverUser';
 import { Marble } from '@worldcoin/mini-apps-ui-kit-react';
 import { redirect } from 'next/navigation';
 
@@ -16,6 +18,12 @@ export default async function Profile() {
     username: session?.user.username ?? 'demo human',
     profilePictureUrl: session?.user.profilePictureUrl,
   };
+
+  const userId = await resolveUserId();
+  const earnings = userId ? totalEarnings(userId) : 0;
+  const stats = userId
+    ? reputation(userId)
+    : { averageScore: 0, uploads: 0, reputation: 'rookie' as const };
 
   async function logout() {
     'use server';
@@ -40,6 +48,9 @@ export default async function Profile() {
                 <p className="truncate text-xl font-semibold capitalize tracking-tight text-stone-950">
                   {user.username}
                 </p>
+                <p className="mt-0.5 text-xs capitalize text-stone-500">
+                  {stats.reputation} contributor
+                </p>
               </div>
             </div>
           </SurfaceCard>
@@ -52,7 +63,23 @@ export default async function Profile() {
                   Rewards from approved recordings.
                 </p>
               </div>
-              <p className="text-2xl font-semibold tracking-tight text-stone-950">$0.00</p>
+              <p className="text-2xl font-semibold tracking-tight text-stone-950">
+                ${earnings.toFixed(2)}
+              </p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 text-xs">
+              <div>
+                <p className="text-stone-500">Avg quality</p>
+                <p className="mt-1 text-sm font-semibold text-stone-900">
+                  {stats.averageScore}/100
+                </p>
+              </div>
+              <div>
+                <p className="text-stone-500">Uploads</p>
+                <p className="mt-1 text-sm font-semibold text-stone-900">
+                  {stats.uploads}
+                </p>
+              </div>
             </div>
           </SurfaceCard>
 

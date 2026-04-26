@@ -3,11 +3,13 @@
 import { Button } from '@worldcoin/mini-apps-ui-kit-react';
 import { useEffect, useRef, useState } from 'react';
 import { blurFacesInClip } from '@/lib/clientFaceBlur';
+import { scanClipQuality } from '@/lib/qualityScan';
+import type { SignalSummary } from '@/lib/signalAggregator';
 import { ActionStack, SectionHeader, SurfaceCard } from './DesignPrimitives';
 import type { CapturedClip } from './types';
 
 type Stage = {
-  id: string;
+  id: 'blur' | 'score' | 'pack';
   label: string;
   detail: string;
 };
@@ -16,29 +18,31 @@ const STAGES: Stage[] = [
   {
     id: 'blur',
     label: 'Blur faces',
-    detail: 'Running on-device privacy pass',
+    detail: 'On-device privacy pass with MediaPipe.',
   },
   {
-    id: 'quality',
-    label: 'Quality scoring',
-    detail: 'Lighting, motion, and framing heuristics',
+    id: 'score',
+    label: 'Score quality',
+    detail: 'Per-second hand detection, lighting, and motion analysis.',
   },
   {
-    id: 'segment',
-    label: 'Auto segmentation',
-    detail: 'Dummy task steps generated for this prototype',
+    id: 'pack',
+    label: 'Prepare upload',
+    detail: 'Finalising the redacted clip for transfer.',
   },
 ];
 
 type ProcessingStepProps = {
   clip: CapturedClip;
-  onDone: (clip: CapturedClip) => void;
+  onDone: (clip: CapturedClip, summary: SignalSummary) => void;
 };
 
 export function ProcessingStep({ clip, onDone }: ProcessingStepProps) {
   const [index, setIndex] = useState(0);
   const [blurProgress, setBlurProgress] = useState(0);
+  const [scoreProgress, setScoreProgress] = useState(0);
   const [processedClip, setProcessedClip] = useState<CapturedClip | null>(null);
+  const [summary, setSummary] = useState<SignalSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
 
@@ -55,15 +59,19 @@ export function ProcessingStep({ clip, onDone }: ProcessingStepProps) {
           if (!cancelled) setBlurProgress(progress);
         });
         if (cancelled) return;
-        setProcessedClip(redactedClip);
+
         setIndex(1);
-
-        await new Promise((resolve) => window.setTimeout(resolve, 700));
+        const scanSummary = await scanClipQuality(clip, (progress) => {
+          if (!cancelled) setScoreProgress(progress);
+        });
         if (cancelled) return;
+
         setIndex(2);
-
-        await new Promise((resolve) => window.setTimeout(resolve, 700));
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
         if (cancelled) return;
+
+        setProcessedClip(redactedClip);
+        setSummary(scanSummary);
         setIndex(STAGES.length);
       } catch (pipelineError) {
         if (cancelled) return;
@@ -82,17 +90,24 @@ export function ProcessingStep({ clip, onDone }: ProcessingStepProps) {
     };
   }, [clip]);
 
+  const ready = processedClip !== null && summary !== null;
+
   return (
     <div className="flex w-full max-w-md flex-col gap-8">
       <SectionHeader
         title="Processing"
-        description="Blurring faces, scoring quality, and generating dummy segments before upload."
+        description="Blurring faces and running real hand detection before upload."
       />
 
       <ol className="flex flex-col gap-4">
         {STAGES.map((stage, i) => {
           const done = i < index;
           const active = i === index && index < STAGES.length;
+          const showProgress =
+            active && (stage.id === 'blur' || stage.id === 'score');
+          const progressValue =
+            stage.id === 'blur' ? blurProgress : scoreProgress;
+
           return (
             <li key={stage.id}>
               <SurfaceCard
@@ -105,16 +120,16 @@ export function ProcessingStep({ clip, onDone }: ProcessingStepProps) {
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-semibold text-stone-900">
                       {stage.label}
                     </p>
                     <p className="text-xs text-stone-600">{stage.detail}</p>
-                    {stage.id === 'blur' && active ? (
+                    {showProgress ? (
                       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100">
                         <div
                           className="h-full rounded-full bg-stone-950 transition-all duration-300"
-                          style={{ width: `${blurProgress}%` }}
+                          style={{ width: `${progressValue}%` }}
                         />
                       </div>
                     ) : null}
@@ -139,9 +154,9 @@ export function ProcessingStep({ clip, onDone }: ProcessingStepProps) {
         <ActionStack>
           <Button
             className="w-full"
-            disabled={!processedClip}
+            disabled={!ready}
             onClick={() => {
-              if (processedClip) onDone(processedClip);
+              if (processedClip && summary) onDone(processedClip, summary);
             }}
             size="lg"
             variant="primary"
