@@ -267,6 +267,14 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
     }
   }, [elapsed, recording, stopRecording]);
 
+  const cancelPreview = useCallback(() => {
+    setCountdown(null);
+    setRecording(false);
+    setStarted(false);
+    stopStream();
+    onBack();
+  }, [onBack, stopStream]);
+
   if (started) {
     return (
       <div className="fixed inset-0 z-50 bg-stone-950">
@@ -278,6 +286,26 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
           playsInline
         />
         <canvas ref={canvasRef} className="hidden" aria-hidden />
+
+        {!recording ? (
+          <button
+            type="button"
+            onClick={cancelPreview}
+            aria-label="Cancel recording"
+            className="absolute left-5 top-[calc(18px+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur transition active:scale-95"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5">
+              <path
+                d="M15 5.75 8.75 12 15 18.25"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              />
+            </svg>
+          </button>
+        ) : null}
 
         {recording ? (
           <div className="absolute inset-x-0 top-[calc(18px+env(safe-area-inset-top))] flex justify-center px-6">
@@ -310,9 +338,18 @@ export function RecordingStep({ task, onBack, onComplete }: RecordingStepProps) 
               type="button"
               disabled={countdown !== null}
               onClick={beginCountdown}
-              className="rounded-full bg-stone-950 px-7 py-4 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] ring-1 ring-white/15 transition active:scale-95 disabled:opacity-70"
+              className="flex h-14 min-w-[168px] items-center justify-center rounded-full border-0 px-8 text-base font-semibold shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition active:scale-95 disabled:opacity-70"
+              style={{
+                backgroundColor: '#ef4444',
+                color: '#ffffff',
+                border: '0',
+                borderRadius: 9999,
+                WebkitAppearance: 'none',
+                appearance: 'none',
+                lineHeight: 1,
+              }}
             >
-              Start record
+              I am ready
             </button>
           )}
         </div>
